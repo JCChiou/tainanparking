@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/myBackround"
+    android:gravity="fill_vertical"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/clu_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TextView"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:textColor="@color/black"
+        app:drawableLeftCompat="@drawable/ic_baseline_place_24" />
+
+    <TextView
+        android:id="@+id/clu_car"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:layout_marginStart="0dp"
+        android:layout_marginLeft="0dp"
+        android:text="TextView"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:textColor="#FF0000"
+        app:drawableLeftCompat="@drawable/ic_baseline_directions_car_24" />
+
+    <TextView
+        android:id="@+id/clu_moto"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:layout_marginStart="0dp"
+        android:layout_marginLeft="0dp"
+        android:text="TextView"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:textColor="#FF0000"
+        android:textSize="18sp"
+        app:drawableLeftCompat="@drawable/ic_baseline_two_wheeler_24" />
+
+
+</LinearLayout>
