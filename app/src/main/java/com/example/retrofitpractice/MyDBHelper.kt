@@ -184,7 +184,11 @@ enum class MyLnglat(val park_name: String , val my_longitude : Double , val my_L
     A01481("富中街停車場", 23.079851, 120.288075),
     A01491("富安三街停車場", 23.081723, 120.288867),
     A01501("明大停車場", 23.073274, 120.289969),
-    A01511("億載公園停車場",22.991168,120.159479);
+    A01511("億載公園停車場",22.991168,120.159479),
+    A01521("水景停車場",22.999175,120.157886),
+    A01531("港濱停車場(第一區)",22.994969,120.163416),
+    A01541("港濱停車場(第二區)",22.993735,120.158557),
+    A01551("林默娘停車場",22.992914,120.157155);
 }
 class myTransferLatLng(){
     fun toGetLatLng( code: String?) : String {
@@ -327,6 +331,10 @@ class myTransferLatLng(){
             "A01491" ->"${MyLnglat.A01491.my_longitude}, ${MyLnglat.A01491.my_Latitude}"
             "A01501" ->"${MyLnglat.A01501.my_longitude}, ${MyLnglat.A01501.my_Latitude}"
             "A01511" ->"${MyLnglat.A01511.my_longitude}, ${MyLnglat.A01511.my_Latitude}"
+            "A01521" ->"${MyLnglat.A01521.my_longitude}, ${MyLnglat.A01521.my_Latitude}"
+            "A01531" ->"${MyLnglat.A01531.my_longitude}, ${MyLnglat.A01531.my_Latitude}"
+            "A01541" ->"${MyLnglat.A01541.my_longitude}, ${MyLnglat.A01541.my_Latitude}"
+            "A01551" ->"${MyLnglat.A01551.my_longitude}, ${MyLnglat.A01551.my_Latitude}"
 
             else -> "no LngLat data"
         }

@@ -3,16 +3,21 @@ package com.example.retrofitpractice
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.location.Location
 import android.location.LocationManager
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkInfo
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,6 +25,8 @@ import android.widget.*
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -33,6 +40,7 @@ import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.net.NetworkInterface
 
 const val DISPtype = 1
 const val USER_DISPtype = 2
@@ -51,7 +59,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     private val api = retrofit.create(ApiInterface::class.java)
-
+    private lateinit var userRecyclerView :RecyclerView
+    private lateinit var linearLayoutManager : LinearLayoutManager
+    private lateinit var myadapter :RecShowDbAdapter
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,36 +74,40 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
         userDb = UserDBHelper(this).writableDatabase
         /** 獲取JSON資料 */
         findViewById<Button>(R.id.btn_info).setOnClickListener() {
-            val myBar = findViewById<ProgressBar>(R.id.mprogressBar)
-            myBar.visibility = View.VISIBLE
-            /** progress Bar start */
-            api.login().enqueue(object : Callback<GetData> {
-                override fun onFailure(call: Call<GetData>, t: Throwable) {
-                    Toast.makeText(this@MainActivity, "連線失敗，請確認連線後再嘗試", Toast.LENGTH_SHORT).show()
-                }
-
-                @SuppressLint("SdCardPath")
-                override fun onResponse(call: Call<GetData>, response: Response<GetData>) {
-                    val lis = response.body()!!.data
-                    /**寫入dataBase*/
-                    myWriteDB(lis)
-                   /**讀取database*/
-                    val sh = getJsonDbData() //from JSON open data
-                    val userDB = getUserDBData()   // user define location
-                    //Log.d("show db", userDB)
-                    addItems(sh)
-                    if (userDB.isNotEmpty()){
-                        Log.d("user自定義位置的資料", "$userDB")
-                        userAddItem(userDB)
+            if (checkNetwork()) { /** if Net connection is available */
+                val myBar = findViewById<ProgressBar>(R.id.mprogressBar)
+                myBar.visibility = View.VISIBLE
+                /** progress Bar start */
+                api.login().enqueue(object : Callback<GetData> {
+                    override fun onFailure(call: Call<GetData>, t: Throwable) {
+                        Toast.makeText(this@MainActivity, "連線失敗，請確認連線後再嘗試", Toast.LENGTH_SHORT).show()
                     }
-                    myBar.visibility = (View.GONE)
-                    /** progress Bar end */
-                }
-            })
+
+                    @SuppressLint("SdCardPath")
+                    override fun onResponse(call: Call<GetData>, response: Response<GetData>) {
+                        val lis = response.body()!!.data
+                        /**寫入dataBase*/
+                        myWriteDB(lis)
+                        /**讀取database*/
+                        val sh = getJsonDbData() //from JSON open data
+                        val userDB = getUserDBData()   // user define location
+                        //Log.d("show db", userDB)
+                        addItems(sh)
+                        if (userDB.isNotEmpty()) {
+                            Log.d("user自定義位置的資料", "$userDB")
+                            userAddItem(userDB)
+                        }
+                        myBar.visibility = (View.GONE)
+                        /** progress Bar end */
+                    }
+                })
+            }
         }
         /**user 點擊"記錄現地"的按鈕 */
         findViewById<Button>(R.id.btn_recordLoc).setOnClickListener {
-            showPopupWindow()
+            if(checkNetwork()) {
+                showPopupWindow()
+            }
         }
         /**user 點擊"編輯位置"的按鈕 */
         findViewById<Button>(R.id.btn_edit).setOnClickListener {
@@ -307,9 +321,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
     /**show popup window */
     private fun showEditPopupWindow(){
         /**get userDB */
-
-        val sPopupWindow = PopupWindow(this)
+        val toEditRec = getUserDBData()
         val sPopupView = LayoutInflater.from(this).inflate(R.layout.edit_popup_window,null)
+        userRecyclerView = sPopupView.findViewById<RecyclerView>(R.id.rec_spopup)
+        linearLayoutManager = LinearLayoutManager(this)
+        userRecyclerView.layoutManager = linearLayoutManager
+        myadapter = RecShowDbAdapter()
+        /** bind adapter */
+        userRecyclerView.adapter = myadapter
+        myadapter.reload(toEditRec)
+        val sPopupWindow = PopupWindow(this)
         sPopupWindow.isFocusable = true
         sPopupWindow.contentView = sPopupView
         sPopupWindow.width = ViewGroup.LayoutParams.MATCH_PARENT
@@ -390,6 +411,25 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
             Toast.makeText(this,"無法取得位置資訊，請確認網路與定位功能是否開啟",Toast.LENGTH_LONG).show()
             null
         }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.M)
+    private fun checkNetwork() : Boolean{
+        /** check NetWork if enable */
+        val connManager : ConnectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val info : Network? = connManager.activeNetwork
+        return if(info == null){
+            val v = layoutInflater.inflate(R.layout.custom_toast,findViewById(R.id.custom_toast_container),false)
+            v.findViewById<TextView>(R.id.toast_msg).text = "請開啟網路連線功能"
+            with(Toast(this)){
+                duration = Toast.LENGTH_LONG
+                view = v
+                setGravity(Gravity.CENTER_VERTICAL,0,0)
+                show()
+            }
+            //Toast.makeText(this, "請開啟網路連線", Toast.LENGTH_LONG).show()
+            false
+        }else true
     }
 }
 
