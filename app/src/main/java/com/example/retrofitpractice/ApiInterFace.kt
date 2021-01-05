@@ -1,12 +1,7 @@
 package com.example.retrofitpractice
 
-import android.util.Log
-import androidx.recyclerview.widget.RecyclerView
 import retrofit2.Call
-import retrofit2.http.Body
 import retrofit2.http.GET
-import retrofit2.http.Headers
-import retrofit2.http.POST
 
 //base URL :https://opengov.tainan.gov.tw:443/OpenApi/
 
@@ -20,4 +15,12 @@ interface CellClickListener {
     fun my_nCellClickListener(data : String?){
         //Log.d("呼叫","$data")
     }
+
+interface OnItemClickHandler{
+    // 提供onItemClick方法作為點擊事件，括號內為接受的參數
+    fun onItemClick(text: String?)
+
+    // 提供onItemRemove做為移除項目的事件
+    fun onItemRemove(position: Int, text: String?)
+}
 }

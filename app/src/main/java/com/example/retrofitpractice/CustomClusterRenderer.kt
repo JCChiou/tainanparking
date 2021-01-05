@@ -21,7 +21,7 @@ class CustomClusterRenderer(context: Context, map: GoogleMap, clusterManager: Cl
         super.onBeforeClusterItemRendered(item, markerOptions)
         val markerDescriptor :BitmapDescriptor
         val mytype = item.getMydispType()
-        Log.d("改變顏色", "$mytype")
+        //Log.d("改變顏色", "$mytype")
         if(mytype == 1) {
             markerDescriptor = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE)
             markerOptions.icon(markerDescriptor).snippet(item.title)
@@ -35,7 +35,7 @@ class CustomClusterRenderer(context: Context, map: GoogleMap, clusterManager: Cl
 
     override fun onClusterItemUpdated(item: MyItem, marker: Marker) {
         super.onClusterItemUpdated(item, marker)
-        Log.d("clustering update","更新了")
+        //Log.d("clustering update","更新了")
     }
 
     //    override fun onBeforeClusterRendered(cluster: Cluster<MyItem>, markerOptions: MarkerOptions) {

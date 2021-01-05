@@ -12,17 +12,15 @@ import android.location.Location
 import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.Network
-import android.net.NetworkInfo
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
+import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -40,14 +38,13 @@ import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.net.NetworkInterface
 
 const val DISPtype = 1
 const val USER_DISPtype = 2
 //台南市政府
 /** https://opengov.tainan.gov.tw/OpenApi/api/service/Get/c3604e1d-c4e1-4224-9d41-084ce299c3bf */
 
-class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener , GoogleMap.OnInfoWindowClickListener {
+class MainActivity : AppCompatActivity(), OnMapReadyCallback , GoogleMap.OnInfoWindowClickListener {
     private lateinit var mClusterManager: ClusterManager<MyItem>
     lateinit var mMap: GoogleMap
     lateinit var dbrw: SQLiteDatabase
@@ -66,10 +63,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        supportActionBar?.hide()
         //初始化googleMap
-        val mapFragment: SupportMapFragment? =
-                supportFragmentManager.findFragmentById(R.id.myMapView) as? SupportMapFragment
-        mapFragment?.getMapAsync(this)
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_LOCATION_EXTRA_COMMANDS) != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_PERMISSIONS)
+        } else{
+            val mapFragment: SupportMapFragment? =
+                    supportFragmentManager.findFragmentById(R.id.myMapView) as? SupportMapFragment
+            mapFragment?.getMapAsync(this)
+        }
+
         /**create user define Location database*/
         userDb = UserDBHelper(this).writableDatabase
         /** 獲取JSON資料 */
@@ -94,7 +97,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
                         //Log.d("show db", userDB)
                         addItems(sh)
                         if (userDB.isNotEmpty()) {
-                            Log.d("user自定義位置的資料", "$userDB")
+                            //Log.d("user自定義位置的資料", "$userDB")
                             userAddItem(userDB)
                         }
                         myBar.visibility = (View.GONE)
@@ -139,13 +142,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
 
     @SuppressLint("PotentialBehaviorOverride")
     override fun onMapReady(p0: GoogleMap) {
+        //Log.d("Map ready", "ready")
         mMap = p0
         mMap.clear()
         /**判斷權限*/
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return
         }
-
         p0.isMyLocationEnabled = true //顯示我的位置按鈕
         setUpClusterer()
         /** clusterer initial*/
@@ -153,7 +156,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
         /** Cluster Item click event , in this case , trigger google map navigation*/
         mClusterManager.setOnClusterItemInfoWindowClickListener { item ->
             if (item != null) {
-                Log.d("myLoc  ", "${item.position.latitude},${item.position.longitude}")
+                //Log.d("myLoc  ", "${item.position.latitude},${item.position.longitude}")
                 val gmmIntentUri =
                         Uri.parse("geo:0,0?q=${item.position.latitude},${item.position.longitude}")
                 val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
@@ -170,6 +173,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
     @SuppressLint("PotentialBehaviorOverride")
     private fun setUpClusterer() {
         /** locate to Tainan train Station */
+        Log.d("初始化標記", "執行")
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(22.997216446206675, 120.21263744087841), 13f))
         mClusterManager = ClusterManager<MyItem>(this, mMap)
         mMap.setOnCameraIdleListener(mClusterManager)
@@ -178,28 +182,36 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
     }
 
     private fun userAddItem(addArray: ArrayList<UserDisplay>){
-        for(i in addArray){
-            val lat = i.lnglat.split(",")[0].toDouble()
-            val lng = i.lnglat.split(",")[1].toDouble()
-            val title = i.pName
-            val snippet = i.dispType.toString()
-            val dispType = i.dispType
-            val offsetItem = MyItem(lat,lng,title,snippet,dispType)
-            mClusterManager.addItem(offsetItem)
+        try {
+            for(i in addArray){
+                val lat = i.lnglat.split(",")[0].toDouble()
+                val lng = i.lnglat.split(",")[1].toDouble()
+                val title = i.pName
+                val snippet = i.dispType.toString()
+                val dispType = i.dispType
+                val offsetItem = MyItem(lat,lng,title,snippet,dispType)
+                mClusterManager.addItem(offsetItem)
+            }
+        }catch (e:Exception){
+            Toast.makeText(this@MainActivity,"格式轉換錯誤", Toast.LENGTH_SHORT).show()
         }
         mClusterManager.cluster()
     }
     private fun addItems(addArray: ArrayList<display>) {
-        Log.d("do addItem", "Start add Item")
         mClusterManager.clearItems()
-        for (j in addArray) {
-            val lat = j.lnglat.toString().split(",")[0].toDouble()
-            val lng = j.lnglat.toString().split(",")[1].toDouble()
-            val title = j.name
-            val snippet = j.car.toString() + "," + j.moto.toString()
-            val dispType = j.dType
-            val offsetItem = MyItem(lat, lng, title, snippet, dispType)
-            mClusterManager.addItem(offsetItem)
+        /** try catch */
+        try {
+            for (j in addArray) {
+                val lat = j.lnglat.toString().split(",")[0].toDouble()
+                val lng = j.lnglat.toString().split(",")[1].toDouble()
+                val title = j.name
+                val snippet = j.car.toString() + "," + j.moto.toString()
+                val dispType = j.dType
+                val offsetItem = MyItem(lat, lng, title, snippet, dispType)
+                mClusterManager.addItem(offsetItem)
+            }
+        }catch (e:Exception){
+                Toast.makeText(this@MainActivity,"格式轉換錯誤", Toast.LENGTH_SHORT).show()
         }
         mClusterManager.cluster()
     }
@@ -209,39 +221,41 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
     private fun myWriteDB(lis: List<ApiData>) {
         dbrw = MyDBHelper(this).writableDatabase
         val myLis = lis // lis from JSON
-        val myTransform = myTransferLatLng() //實例化要轉換經緯度類別
+        //val myTransform = myTransferLatLng() //實例化要轉換經緯度類別
         val values = ContentValues()  //存放準備寫入DB的文字
         for (i in myLis.indices) {
-            val my_tarns = myTransform.toGetLatLng(myLis[i].code)
+
+//            val my_tarns = myTransform.toGetLatLng(myLis[i].code)
             //Log.d("轉換後的經緯度", my_tarns)
-            values.put(ADDRESS, myLis[i].address.toString());
-            values.put(CAR, myLis[i].car);
-            values.put(CARDIS, myLis[i].carDis);
-            values.put(CARDIS_TOTAL, myLis[i].carDis_total);
-            values.put(CARGREEN, myLis[i].carGreen);
-            values.put(CARGREEN_TOTAL, myLis[i].carGreen_total);
-            values.put(CARWOMAN, myLis[i].carWoman);
-            values.put(CARWOMAN_TOTAL, myLis[i].carWoman_total);
-            values.put(CAR_TOTAL, myLis[i].car_total);
-            values.put(CHARGEFEE, myLis[i].chargeFee.toString());
-            values.put(CHARGETIME, myLis[i].chargeTime.toString());
-            values.put(CODE, myLis[i].code.toString());
-            values.put(ID, myLis[i].id.toString());
-            values.put(LARGECAR, myLis[i].largeCar);
-            values.put(LARGECAR_TOTAL, myLis[i].largeCar_total);
-            values.put(LNGLAT, my_tarns);
-            values.put(MOTO, myLis[i].moto);
-            values.put(MOTODIS, myLis[i].motoDis);
-            values.put(MOTODIS_TOTAL, myLis[i].motoDis_total);
-            values.put(MOTO_TOTAL, myLis[i].moto_total);
-            values.put(NAME, myLis[i].name.toString());
-            values.put(TYPEID, myLis[i].typeId.toString());
-            values.put(TYPENAME, myLis[i].typeName.toString());
-            values.put(UPDATE_TIME, myLis[i].update_time.toString());
-            values.put(ZONE, myLis[i].zone.toString());
+            values.put(ADDRESS, myLis[i].address.toString())
+            values.put(CAR, myLis[i].car)
+            values.put(CARDIS, myLis[i].carDis)
+            values.put(CARDIS_TOTAL, myLis[i].carDis_total)
+            values.put(CARGREEN, myLis[i].carGreen)
+            values.put(CARGREEN_TOTAL, myLis[i].carGreen_total)
+            values.put(CARWOMAN, myLis[i].carWoman)
+            values.put(CARWOMAN_TOTAL, myLis[i].carWoman_total)
+            values.put(CAR_TOTAL, myLis[i].car_total)
+            values.put(CHARGEFEE, myLis[i].chargeFee.toString())
+            values.put(CHARGETIME, myLis[i].chargeTime.toString())
+            values.put(CODE, myLis[i].code.toString())
+            values.put(ID, myLis[i].id.toString())
+            values.put(LARGECAR, myLis[i].largeCar)
+            values.put(LARGECAR_TOTAL, myLis[i].largeCar_total)
+//            values.put(LNGLAT, my_tarns)
+            values.put(LNGLAT, myLis[i].lnglat)
+            values.put(MOTO, myLis[i].moto)
+            values.put(MOTODIS, myLis[i].motoDis)
+            values.put(MOTODIS_TOTAL, myLis[i].motoDis_total)
+            values.put(MOTO_TOTAL, myLis[i].moto_total)
+            values.put(NAME, myLis[i].name.toString())
+            values.put(TYPEID, myLis[i].typeId.toString())
+            values.put(TYPENAME, myLis[i].typeName.toString())
+            values.put(UPDATE_TIME, myLis[i].update_time.toString())
+            values.put(ZONE, myLis[i].zone.toString())
             values.put(ZONDID, myLis[i].zoneId.toString())
             values.put(DISP_TYPE,DISPtype)
-            dbrw.insert(TABLE_NAME, null, values);
+            dbrw.insert(TABLE_NAME, null, values)
         }
         //dbrw.close() //寫入完畢, close DB
     }
@@ -249,7 +263,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
     private fun getUserDBData(): ArrayList<UserDisplay>{
         val userShowDB = ArrayList<UserDisplay>()
         val cursor : Cursor = userDb.query(USER_TABLE_NAME,
-                arrayOf("pName", "latLng", "u_disptype"),
+                arrayOf("id", "pName", "latLng", "u_disptype"),
                 null,
                 null,
                 null,
@@ -260,6 +274,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
             if (cursor.moveToFirst()) {
                 do {
                     val item = UserDisplay(
+                            cursor.getInt(cursor.getColumnIndex("id")),
                             cursor.getString(cursor.getColumnIndex("latLng")),
                             cursor.getString(cursor.getColumnIndex("pName")),
                             cursor.getInt(cursor.getColumnIndex("u_disptype"))
@@ -313,12 +328,49 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
         }
         return showDb
     }
+    /** 更新修改後的名稱 */
+    private fun myUpdateDB(uPosition : Int, uString : String){
+        userDb.execSQL(" UPDATE " + USER_TABLE_NAME + " SET pName = " + "'" + uString + "'" + "WHERE $USER_ID = '" + uPosition + "'")
+    }
+
+    /** 刪除使用者所選取的項目 */
+    private fun myDeleteDB(dPosition: Int){
+        userDb.delete(USER_TABLE_NAME, " $USER_ID = $dPosition " , null)
+    }
+
+    /**get userDB for edit that select data */
+//    private fun getUserSelEditDb(position : Int): ArrayList<UserDisplay>{
+//        val userShowDB = ArrayList<UserDisplay>()
+//
+//        val cursor : Cursor = userDb.rawQuery("SELECT * FROM $USER_TABLE_NAME WHERE $USER_ID = $position +1 ", null)
+//        try {
+//            if (cursor.moveToFirst()) {
+//                do {
+//                    val item = UserDisplay(
+//                            cursor.getInt(cursor.getColumnIndex("id")),
+//                            cursor.getString(cursor.getColumnIndex("latLng")),
+//                            cursor.getString(cursor.getColumnIndex("pName")),
+//                            cursor.getInt(cursor.getColumnIndex("u_disptype"))
+//                    )
+//                    userShowDB.add(item)
+//                } while (cursor.moveToNext())
+//            }
+//        } catch (e: Exception) {
+//            Log.d("讀取資料庫出錯了", "$e")
+//        } finally {
+//            if (!cursor.isClosed) {
+//                cursor.close()
+//            }
+//        }
+//        return userShowDB
+//    }
 
     override fun onInfoWindowClick(p0: Marker?) {
         //Log.d("近來onClusterInfoWindowCl","XXXXXXXXXXXXXXXXXXXXX")
     }
 
     /**show popup window */
+    @SuppressLint("InflateParams")
     private fun showEditPopupWindow(){
         /**get userDB */
         val toEditRec = getUserDBData()
@@ -334,17 +386,66 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
         sPopupWindow.isFocusable = true
         sPopupWindow.contentView = sPopupView
         sPopupWindow.width = ViewGroup.LayoutParams.MATCH_PARENT
-        sPopupWindow.height = ViewGroup.LayoutParams.WRAP_CONTENT
+        sPopupWindow.height = ViewGroup.LayoutParams.MATCH_PARENT
         sPopupWindow.isOutsideTouchable = true
         sPopupWindow.showAsDropDown(findViewById<Button>(R.id.btn_edit))
 
+        /** 點選返回健 隱藏popup window */
+        sPopupView.findViewById<Button>(R.id.btn_back).setOnClickListener { sPopupWindow.dismiss() }
+
+        /** RecyclerView click event */
+        userRecyclerView.addOnItemTouchListener(SingleItemClickListener(userRecyclerView,object: SingleItemClickListener.OnItemClickListener{
+            override fun onItemClick(view: View?, position: Int) {
+                /** 取得點擊item的ID編號給後續更新與刪除的條件依據 */
+                val selItemPosId =  toEditRec[position].id
+                //Toast.makeText(this@MainActivity, "touch click:" + position, Toast.LENGTH_SHORT).show()
+                /** 單擊顯示編輯視窗 並將單擊送資料庫查詢對應欄位資料 顯示於對話框 */
+                val mview = LayoutInflater.from(this@MainActivity).inflate(R.layout.update_userdb,null)
+                mview.findViewById<EditText>(R.id.ed_updateName).setText(toEditRec[position].pName)
+                AlertDialog.Builder(this@MainActivity)
+                        .setTitle("更新資料")
+                        .setView(mview)
+                        .setPositiveButton("確定") {
+                            /** 執行資料庫更新 */
+                            dialog, which ->
+                            val getmyText = mview.findViewById<EditText>(R.id.ed_updateName).text.toString()
+                            myUpdateDB(selItemPosId, getmyText)
+                            sPopupWindow.dismiss()
+                            AlertDialog.Builder(this@MainActivity)
+                                    .setTitle("更新資料完成")
+                                    .setPositiveButton("OK"){
+                                        dialog, which -> dialog?.dismiss()
+                                    }
+                                    .show()
+                        }
+                        .setNeutralButton("取消"){
+                            dialog, which -> dialog?.dismiss()
+                        }
+                        .setNegativeButton("刪除") {
+                            dialog, which ->
+                            myDeleteDB(selItemPosId)
+                            sPopupWindow.dismiss()
+                            AlertDialog.Builder(this@MainActivity)
+                                    .setTitle("刪除資料完成")
+                                    .setPositiveButton("OK"){
+                                        dialog, which -> dialog?.dismiss()
+                                    }
+                                    .show()
+                        }
+                        .show()
+            }
+
+            override fun onItemLongClick(view: View?, position: Int) {
+                /** 長按事件 */
+//                Toast.makeText(this@MainActivity, "touch Long click:" + position, Toast.LENGTH_SHORT).show();
+            }
+        }))
     }
 
     @SuppressLint("Recycle")
     private fun showPopupWindow() {
         val locTosave = getRecordLocation()
         /**get current Location */
-
         val popupWindow = PopupWindow(this)
         val popupView = LayoutInflater.from(this).inflate(R.layout.popup_window, null)
         popupWindow.isFocusable = true
@@ -354,7 +455,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
         popupWindow.isOutsideTouchable = true
         popupWindow.showAsDropDown(findViewById<Button>(R.id.btn_recordLoc))
         popupView.findViewById<TextView>(R.id.tv_saveLoc).text = locTosave
-        Log.d("show loC= ", "$locTosave")
 
         /**按下ok按鈕 執行的動作*/
         popupView.findViewById<Button>(R.id.popup_ok).setOnClickListener {
@@ -367,12 +467,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, CellClickListener 
 //                userDb = UserDBHelper(this).writableDatabase
                 val values = ContentValues()  //存放準備寫入DB的文字
                 /**寫入停車場名稱&經緯度*/
-                values.put(USER_PNAME,nameCheck.toString());
-                values.put(USER_LATLNG,locTosave );
-                values.put(USER_DISP_TYPE, USER_DISPtype);
+                values.put(USER_PNAME,nameCheck.toString())
+                values.put(USER_LATLNG,locTosave )
+                values.put(USER_DISP_TYPE, USER_DISPtype)
+
                 if (userDb.isOpen){
                     Log.d("check DB is open","inside")
-                    userDb.insert(USER_TABLE_NAME, null, values);
+                    userDb.insert(USER_TABLE_NAME, null, values)
                     popupWindow.dismiss() //隱藏popup window
                     val userDB = getUserDBData()
                     userAddItem(userDB)

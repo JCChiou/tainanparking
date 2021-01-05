@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#80352929">
 
     <TextView
         android:id="@+id/textView"
@@ -12,6 +13,7 @@
         android:layout_marginTop="8dp"
         android:text="新增停車場位置"
         android:textAppearance="@style/TextAppearance.AppCompat.Large"
+        android:textColor="@color/white"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -35,6 +37,8 @@
         android:layout_marginTop="16dp"
         android:text="停車場名稱"
         android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:textColor="@color/purple_500"
+        android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView" />
 
@@ -49,6 +53,7 @@
         android:hint="請輸入名稱"
         android:inputType="textPersonName"
         android:selectAllOnFocus="false"
+        android:textColor="#FFFFFF"
         app:layout_constraintBottom_toBottomOf="@+id/textView2"
         app:layout_constraintStart_toEndOf="@+id/textView2"
         app:layout_constraintTop_toBottomOf="@+id/textView" />
@@ -71,6 +76,8 @@
         android:layout_marginTop="36dp"
         android:text="位置"
         android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:textColor="@color/purple_500"
+        android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="@+id/textView2"
         app:layout_constraintTop_toBottomOf="@+id/textView2" />
 

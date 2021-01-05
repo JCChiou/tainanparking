@@ -53,6 +53,7 @@ data class display(
 )
 
 data class UserDisplay(
+        val id: Int,
         val lnglat: String,
         val pName : String,
         val dispType : Int
