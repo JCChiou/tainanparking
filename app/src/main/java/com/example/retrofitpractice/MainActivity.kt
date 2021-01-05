@@ -2,6 +2,7 @@ package com.example.retrofitpractice
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -94,10 +95,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback , GoogleMap.OnInfoW
                         /**讀取database*/
                         val sh = getJsonDbData() //from JSON open data
                         val userDB = getUserDBData()   // user define location
-                        //Log.d("show db", userDB)
                         addItems(sh)
                         if (userDB.isNotEmpty()) {
-                            //Log.d("user自定義位置的資料", "$userDB")
                             userAddItem(userDB)
                         }
                         myBar.visibility = (View.GONE)
@@ -164,7 +163,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback , GoogleMap.OnInfoW
                 startActivity(mapIntent)
             }
         }
-        //mMap.setInfoWindowAdapter(ClusterAdapter(this))
         /** 自訂顯示資訊畫面*/
         mClusterManager.markerCollection.setInfoWindowAdapter(ClusterAdapter(this))
         mClusterManager.renderer = CustomClusterRenderer(this, mMap, mClusterManager)
@@ -216,17 +214,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback , GoogleMap.OnInfoW
         mClusterManager.cluster()
     }
 
-
-
     private fun myWriteDB(lis: List<ApiData>) {
         dbrw = MyDBHelper(this).writableDatabase
         val myLis = lis // lis from JSON
-        //val myTransform = myTransferLatLng() //實例化要轉換經緯度類別
         val values = ContentValues()  //存放準備寫入DB的文字
         for (i in myLis.indices) {
-
-//            val my_tarns = myTransform.toGetLatLng(myLis[i].code)
-            //Log.d("轉換後的經緯度", my_tarns)
             values.put(ADDRESS, myLis[i].address.toString())
             values.put(CAR, myLis[i].car)
             values.put(CARDIS, myLis[i].carDis)
@@ -242,7 +234,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback , GoogleMap.OnInfoW
             values.put(ID, myLis[i].id.toString())
             values.put(LARGECAR, myLis[i].largeCar)
             values.put(LARGECAR_TOTAL, myLis[i].largeCar_total)
-//            values.put(LNGLAT, my_tarns)
             values.put(LNGLAT, myLis[i].lnglat)
             values.put(MOTO, myLis[i].moto)
             values.put(MOTODIS, myLis[i].motoDis)
@@ -257,7 +248,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback , GoogleMap.OnInfoW
             values.put(DISP_TYPE,DISPtype)
             dbrw.insert(TABLE_NAME, null, values)
         }
-        //dbrw.close() //寫入完畢, close DB
     }
 
     private fun getUserDBData(): ArrayList<UserDisplay>{
@@ -338,32 +328,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback , GoogleMap.OnInfoW
         userDb.delete(USER_TABLE_NAME, " $USER_ID = $dPosition " , null)
     }
 
-    /**get userDB for edit that select data */
-//    private fun getUserSelEditDb(position : Int): ArrayList<UserDisplay>{
-//        val userShowDB = ArrayList<UserDisplay>()
-//
-//        val cursor : Cursor = userDb.rawQuery("SELECT * FROM $USER_TABLE_NAME WHERE $USER_ID = $position +1 ", null)
-//        try {
-//            if (cursor.moveToFirst()) {
-//                do {
-//                    val item = UserDisplay(
-//                            cursor.getInt(cursor.getColumnIndex("id")),
-//                            cursor.getString(cursor.getColumnIndex("latLng")),
-//                            cursor.getString(cursor.getColumnIndex("pName")),
-//                            cursor.getInt(cursor.getColumnIndex("u_disptype"))
-//                    )
-//                    userShowDB.add(item)
-//                } while (cursor.moveToNext())
-//            }
-//        } catch (e: Exception) {
-//            Log.d("讀取資料庫出錯了", "$e")
-//        } finally {
-//            if (!cursor.isClosed) {
-//                cursor.close()
-//            }
-//        }
-//        return userShowDB
-//    }
 
     override fun onInfoWindowClick(p0: Marker?) {
         //Log.d("近來onClusterInfoWindowCl","XXXXXXXXXXXXXXXXXXXXX")
@@ -401,15 +365,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback , GoogleMap.OnInfoW
                 //Toast.makeText(this@MainActivity, "touch click:" + position, Toast.LENGTH_SHORT).show()
                 /** 單擊顯示編輯視窗 並將單擊送資料庫查詢對應欄位資料 顯示於對話框 */
                 val mview = LayoutInflater.from(this@MainActivity).inflate(R.layout.update_userdb,null)
-                mview.findViewById<EditText>(R.id.ed_updateName).setText(toEditRec[position].pName)
+                val edWindow = mview.findViewById<EditText>(R.id.ed_updateName)
+                edWindow.setText(toEditRec[position].pName)
                 AlertDialog.Builder(this@MainActivity)
                         .setTitle("更新資料")
                         .setView(mview)
                         .setPositiveButton("確定") {
                             /** 執行資料庫更新 */
                             dialog, which ->
-                            val getmyText = mview.findViewById<EditText>(R.id.ed_updateName).text.toString()
+                            val getmyText = edWindow.text.toString()
                             myUpdateDB(selItemPosId, getmyText)
+                            hideKeyboard(mview)
                             sPopupWindow.dismiss()
                             AlertDialog.Builder(this@MainActivity)
                                     .setTitle("更新資料完成")
@@ -419,11 +385,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback , GoogleMap.OnInfoW
                                     .show()
                         }
                         .setNeutralButton("取消"){
-                            dialog, which -> dialog?.dismiss()
+                            dialog, which ->
+                            hideKeyboard(mview)
+                            dialog?.dismiss()
                         }
                         .setNegativeButton("刪除") {
                             dialog, which ->
                             myDeleteDB(selItemPosId)
+                            hideKeyboard(mview)
                             sPopupWindow.dismiss()
                             AlertDialog.Builder(this@MainActivity)
                                     .setTitle("刪除資料完成")
@@ -464,7 +433,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback , GoogleMap.OnInfoW
             if (reg.matches(nameCheck)){
                 //match condition
                 /**執行建立資料庫*/
-//                userDb = UserDBHelper(this).writableDatabase
                 val values = ContentValues()  //存放準備寫入DB的文字
                 /**寫入停車場名稱&經緯度*/
                 values.put(USER_PNAME,nameCheck.toString())
@@ -528,9 +496,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback , GoogleMap.OnInfoW
                 setGravity(Gravity.CENTER_VERTICAL,0,0)
                 show()
             }
-            //Toast.makeText(this, "請開啟網路連線", Toast.LENGTH_LONG).show()
             false
         }else true
+    }
+
+
+
+    fun Context.hideKeyboard(view: View) {
+        val inputMethodManager = getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
+        inputMethodManager.hideSoftInputFromWindow(view.windowToken, 0)
     }
 }
 
@@ -561,3 +535,4 @@ open class MyItem (lat: Double, lng: Double, title: String, snippet: String, dsi
         return mDispType
     }
 }
+

@@ -11,16 +11,3 @@ interface ApiInterface {
     fun login (): Call<GetData>
 }
 
-interface CellClickListener {
-    fun my_nCellClickListener(data : String?){
-        //Log.d("呼叫","$data")
-    }
-
-interface OnItemClickHandler{
-    // 提供onItemClick方法作為點擊事件，括號內為接受的參數
-    fun onItemClick(text: String?)
-
-    // 提供onItemRemove做為移除項目的事件
-    fun onItemRemove(position: Int, text: String?)
-}
-}
